@@ -1,0 +1,19 @@
+{
+  "name": "tyrbot_say",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fs": "0.0.2",
+    "ivona-node": "^0.2.0",
+    "log4js": "^0.6.31",
+    "md5": "^2.0.0",
+    "pg": "^4.4.6",
+    "player": "^0.6.1"
+  }
+}
