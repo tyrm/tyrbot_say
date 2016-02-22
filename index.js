@@ -6,28 +6,23 @@ var fs     = require('fs'),
     Ivona  = require('ivona-node'),
     log4js = require('log4js'),
     md5    = require('md5'),
-    Player = require('player'),
-    TDB    = require('./tdb');
+    player = require('play-sound')(opts = {}),
+    TDB = require('./tdb');
 
 // Init Logging
 log4js.configure('', config.l4j);
-var log    = log4js.getLogger(),
-    tmLog  = log4js.getLogger('tyrmail');
+var log = log4js.getLogger();
 
 // Connect to DB
 var tdb = new TDB(config.pg, log4js);
 
-var ivona;
+// Global Variabales
+var ivona; // Ivona Connection
 
 tdb.reg.get('/config/ivona', function (err, result) {
-  console.log(result);
   ivona = new Ivona(result);
-
-  //ivona.listVoices().on('complete', function (voices) {
-    //log.info(voices);
-  //});
-
-  say("Initializing.");
+  say("Initializing the application.");
+  say("Attempting to connect to queue.");
 
 });
 
@@ -37,10 +32,10 @@ function say(text) {
     var file = config.cache_dir + '/' + vhash + '.mp3';
 
     fs.stat(file, function (err, stat) {
-      if(err == null) {
+      if (err == null) {
         playFile(file);
-      } else if(err.code == 'ENOENT') {
-        ivonaGetFile(text, config.voice, file, function(response){
+      } else if (err.code == 'ENOENT') {
+        ivonaGetFile(text, config.voice, file, function (response) {
           playFile(response.file);
         });
         log.info('File does not exist');
@@ -62,7 +57,7 @@ function voiceHash(text, voiceName, cb) {
 }
 
 function ivonaGetFile(text, voiceObj, file, cb) {
-  log.debug('retrieving voice into file %s', file)
+  log.debug('retrieving voice into file %s', file);
   ivona.createVoice(text, {
     body: {
       voice: voiceObj
@@ -78,17 +73,26 @@ function ivonaGetFile(text, voiceObj, file, cb) {
     });
 }
 
-function playFile(file){
-  var player = new Player(file);
+var playing = false; // Variable
+var playQueue = [];
 
-  log.debug('playing file %s', file);
+function playFile(file) {
+  playQueue.push(file);
 
-  player.on('error', function(err){
-    log.error(err);
-  });
+  if (!playing) {
+    playing = true;
 
-  player.play(function(err, player){
-    if (err) log.error(err);
-    log.debug('finished playing file %s', file);
-  });
+    function _playNext(err) {
+      if (err) log.error(err);
+      if (playQueue.length > 0) {
+        var playFile = playQueue.shift();
+
+        player.play(playFile, _playNext);
+      } else {
+        playing = false;
+      }
+    }
+
+    _playNext();
+  }
 }
