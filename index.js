@@ -2,7 +2,8 @@
 var config = require('./config');
 
 // Load Modules
-var fs     = require('fs'),
+var amqp   = require('amqplib/callback_api'),
+    fs     = require('fs'),
     Ivona  = require('ivona-node'),
     log4js = require('log4js'),
     md5    = require('md5'),
@@ -21,9 +22,10 @@ var ivona; // Ivona Connection
 
 tdb.reg.get('/config/ivona', function (err, result) {
   ivona = new Ivona(result);
-  say("Initializing the application.");
-  say("Attempting to connect to queue.");
+  say("Initializing.");
+  say("Connecting to queue.");
 
+  connectAMQP();
 });
 
 function say(text) {
@@ -35,10 +37,10 @@ function say(text) {
       if (err == null) {
         player.playFile(file);
       } else if (err.code == 'ENOENT') {
+        log.info('retrieving file.');
         ivonaGetFile(text, config.voice, file, function (response) {
           player.playFile(response.file);
         });
-        log.info('File does not exist');
       } else {
         log.error(err);
       }
@@ -69,6 +71,33 @@ function ivonaGetFile(text, voiceObj, file, cb) {
         text: text,
         file: file
       };
-      cb(response);
+      cb(response)
+    }
+  );
+}
+
+function handleMessage(msg) {
+  var sayReq = JSON.parse(msg);
+
+  log.debug(sayReq);
+
+  if (sayReq.say) {
+    say(sayReq.say);
+  }
+}
+
+function connectAMQP() {
+  amqp.connect(config.amqp, function(err, conn) {
+    say('Queue connected.');
+    conn.createChannel(function(err, ch) {
+      var q = 'say';
+
+      ch.assertQueue(q, {durable: false});
+      ch.consume(q, function(msg) {
+        var message = msg.content.toString();
+        log.debug(message);
+        handleMessage(message);
+      }, {noAck: true});
     });
+  });
 }
