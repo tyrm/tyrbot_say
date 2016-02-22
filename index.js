@@ -91,13 +91,13 @@ function handleMessage(msg) {
 }
 
 function connectAMQP() {
-  amqp.connect(config.amqp, function(err, conn) {
+  amqp.connect(config.amqp, function (err, conn) {
     say('Queue connected.');
-    conn.createChannel(function(err, ch) {
+    conn.createChannel(function (err, ch) {
       var q = 'say';
 
       ch.assertQueue(q, {durable: false});
-      ch.consume(q, function(msg) {
+      ch.consume(q, function (msg) {
         var message = msg.content.toString();
         handleMessage(message);
       }, {noAck: true});

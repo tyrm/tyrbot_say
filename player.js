@@ -1,8 +1,8 @@
 var player = require('play-sound')(opts = {});
 
-var playing = false;
+var playing   = false;
 var playQueue = [];
-var response = {};
+var response  = {};
 
 function _playNext(err) {
   if (err) log.error(err);
