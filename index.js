@@ -77,9 +77,13 @@ function ivonaGetFile(text, voiceObj, file, cb) {
 }
 
 function handleMessage(msg) {
-  var sayReq = JSON.parse(msg);
+  var sayReq = {};
 
-  log.debug(sayReq);
+  try {
+    sayReq = JSON.parse(msg);
+  } catch (e) {
+    log.error('JSON packet [%s] is malformed', msg)
+  }
 
   if (sayReq.say) {
     say(sayReq.say);
@@ -95,7 +99,6 @@ function connectAMQP() {
       ch.assertQueue(q, {durable: false});
       ch.consume(q, function(msg) {
         var message = msg.content.toString();
-        log.debug(message);
         handleMessage(message);
       }, {noAck: true});
     });
