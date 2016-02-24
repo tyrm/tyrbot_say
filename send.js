@@ -1,13 +1,22 @@
+
+
 var config = require('./config');
 
 var amqp = require('amqplib/callback_api');
+
+var message = process.argv.slice(2).join([separator = ' ']);
+console.log('\'' + message + '\'');
+
+if (message == '') {
+  message = 'Good evening Tyr.';
+}
 
 amqp.connect(config.amqp, function (err, conn) {
   conn.createChannel(function (err, ch) {
     var q = 'say';
 
     var sayObj = {
-      say: 'Good evening Tyr.'
+      say: message
     };
 
     ch.assertQueue(q, {durable: false});
