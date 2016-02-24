@@ -1,4 +1,4 @@
-
+#!/usr/bin/node
 
 var config = require('./config');
 
