@@ -7,26 +7,47 @@ var amqp   = require('amqplib/callback_api'),
     Ivona  = require('ivona-node'),
     log4js = require('log4js'),
     md5    = require('md5'),
+    os     = require('os'),
     player = require('./player'),
+    redis  = require('redis'),
     TDB    = require('./tdb');
 
 // Init Logging
 log4js.configure('', config.l4j);
 var log    = log4js.getLogger();
+var rdsLog = log4js.getLogger();
 
 // Connect to DB
 var tdb = new TDB(config.pg, log4js);
 
+// init Redis
+var redisClient = redis.createClient(config.redis.options);
+redisClient.auth(config.redis.pass);
+
+redisClient.on('error',function(err){rdsLog.error(err)});
+
 // Global Variabales
 var ivona; // Ivona Connection
 
-tdb.reg.get('/config/ivona', function (err, result) {
+redisClient.hgetall('config:ivona', function (err, result) {
+  log.debug(result);
+
   ivona = new Ivona(result);
   say("Initializing.");
-  say("Connecting to queue.");
 
   connectAMQP();
 });
+
+function doKeepAlive() {
+  var d = new Date();
+  redisClient.hmset("keepalive:say", ['timestamp', d, 'host', os.hostname()], function (err, reply) {
+    if (err) rdsLog.error(err);
+    if (reply != 'OK') rdsLog.info(reply);
+  });
+}
+
+doKeepAlive();
+setInterval(doKeepAlive, 30000);
 
 function say(text) {
   voiceHash(text, config.voice.name, function (vhash) {
@@ -49,13 +70,7 @@ function say(text) {
 }
 
 function voiceHash(text, voiceName, cb) {
-  var voiceHash = md5(voiceName + '|' + text);
-  log.trace({
-    text: text,
-    voice: voiceName,
-    hash: voiceHash
-  });
-  cb(voiceHash);
+  cb(md5(voiceName + '|' + text));
 }
 
 function ivonaGetFile(text, voiceObj, file, cb) {
